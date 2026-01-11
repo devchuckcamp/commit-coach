@@ -2,6 +2,9 @@
 commit-coach.exe
 commit-coach
 
+# Logs
+commit-coach-error.log
+
 # Build artifacts
 dist/
 build/
