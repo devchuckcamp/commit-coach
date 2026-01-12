@@ -3,6 +3,7 @@ package llm
 import (
 	"fmt"
 
+	"github.com/chuckie/commit-coach/internal/adapters/llm/anthropic"
 	"github.com/chuckie/commit-coach/internal/adapters/llm/groq"
 	"github.com/chuckie/commit-coach/internal/adapters/llm/mock"
 	"github.com/chuckie/commit-coach/internal/adapters/llm/ollama"
@@ -15,6 +16,8 @@ func NewFromConfig(provider, apiKey, baseURL, ollamaURL, model string) (ports.LL
 	switch provider {
 	case "openai":
 		return openai.NewClient(apiKey, baseURL)
+	case "anthropic":
+		return anthropic.NewClient(apiKey)
 	case "groq":
 		return groq.NewClient(apiKey, model), nil
 	case "ollama":
@@ -25,4 +28,3 @@ func NewFromConfig(provider, apiKey, baseURL, ollamaURL, model string) (ports.LL
 		return nil, fmt.Errorf("unknown provider: %s", provider)
 	}
 }
-

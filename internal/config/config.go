@@ -10,17 +10,17 @@ import (
 
 // Config holds all application configuration.
 type Config struct {
-	Provider      string
-	APIKey        string
-	Model         string
-	Temperature   float32
-	BaseURL       string
-	OllamaURL     string
-	DiffCap       int
-	ConfirmSend   bool
-	DryRun        bool
-	Redact        bool
-	UseCache      bool
+	Provider    string
+	APIKey      string
+	Model       string
+	Temperature float32
+	BaseURL     string
+	OllamaURL   string
+	DiffCap     int
+	ConfirmSend bool
+	DryRun      bool
+	Redact      bool
+	UseCache    bool
 }
 
 // Load loads configuration with precedence:
@@ -88,6 +88,10 @@ func Load() (*Config, error) {
 		if _, ok := os.LookupEnv("OPENAI_API_KEY"); ok {
 			cfg.APIKey = getEnv("OPENAI_API_KEY", "")
 		}
+	case "anthropic":
+		if _, ok := os.LookupEnv("ANTHROPIC_API_KEY"); ok {
+			cfg.APIKey = getEnv("ANTHROPIC_API_KEY", "")
+		}
 	case "groq":
 		if _, ok := os.LookupEnv("GROQ_API_KEY"); ok {
 			cfg.APIKey = getEnv("GROQ_API_KEY", "")
@@ -99,11 +103,15 @@ func Load() (*Config, error) {
 	}
 
 	// Validate
-	if cfg.Provider != "openai" && cfg.Provider != "groq" && cfg.Provider != "mock" && cfg.Provider != "ollama" {
-		return nil, fmt.Errorf("invalid provider: %s (must be 'openai', 'groq', 'mock', or 'ollama')", cfg.Provider)
+	if cfg.Provider != "openai" && cfg.Provider != "anthropic" && cfg.Provider != "groq" && cfg.Provider != "mock" && cfg.Provider != "ollama" {
+		return nil, fmt.Errorf("invalid provider: %s (must be 'openai', 'anthropic', 'groq', 'mock', or 'ollama')", cfg.Provider)
 	}
 
-	if (cfg.Provider == "openai" || cfg.Provider == "groq") && cfg.APIKey == "" {
+	if (cfg.Provider == "openai" || cfg.Provider == "groq" || cfg.Provider == "anthropic") && cfg.APIKey == "" {
+		// Anthropic uses ANTHROPIC_API_KEY (not PROVIDER_API_KEY like openai/groq), so keep the hint explicit.
+		if cfg.Provider == "anthropic" {
+			return cfg, fmt.Errorf("%w: API key not found for provider anthropic; set ANTHROPIC_API_KEY env var", ErrSetupRequired)
+		}
 		return cfg, fmt.Errorf("%w: API key not found for provider %s; set %s_API_KEY env var", ErrSetupRequired, cfg.Provider, strings.ToUpper(cfg.Provider))
 	}
 

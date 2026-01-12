@@ -57,19 +57,19 @@ func New(app *app.App, provider, model string, temperature float32, baseURL, oll
 	s.Style = lipgloss.NewStyle().Foreground(lipgloss.Color("205"))
 
 	return &Model{
-		app:         app,
-		state:       StateLoading,
+		app:           app,
+		state:         StateLoading,
 		selectedIndex: 0,
-		provider:    provider,
-		model:       model,
-		temperature: temperature,
-		baseURL:     baseURL,
-		ollamaURL:   ollamaURL,
-		llmFactory:  llmFactory,
-		spinner:     s,
-		width:       80,
-		height:      24,
-		err:         nil,
+		provider:      provider,
+		model:         model,
+		temperature:   temperature,
+		baseURL:       baseURL,
+		ollamaURL:     ollamaURL,
+		llmFactory:    llmFactory,
+		spinner:       s,
+		width:         80,
+		height:        24,
+		err:           nil,
 	}
 }
 
@@ -191,7 +191,7 @@ func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			persisted.Provider = m.provider
 			persisted.Model = m.model
 			switch m.provider {
-			case "openai", "groq":
+			case "openai", "groq", "anthropic":
 				persisted.APIKey = apiKey
 			case "ollama":
 				persisted.APIKey = "ollama"

@@ -56,8 +56,8 @@ func run(args []string) int {
 	cfg, err := config.Load()
 	if err != nil {
 		// Fallback: even if the sentinel wrapper is lost, a missing key for
-		// openai/groq should always trigger interactive setup.
-		needsSetup := config.IsSetupRequired(err) || (cfg != nil && (cfg.Provider == "openai" || cfg.Provider == "groq") && cfg.APIKey == "")
+		// openai/groq/anthropic should always trigger interactive setup.
+		needsSetup := config.IsSetupRequired(err) || (cfg != nil && (cfg.Provider == "openai" || cfg.Provider == "groq" || cfg.Provider == "anthropic") && cfg.APIKey == "")
 		if needsSetup {
 			setup := ui.NewSetup(cfg)
 			p := tea.NewProgram(setup)
@@ -83,7 +83,7 @@ func run(args []string) int {
 			cfg.Provider = provider
 			cfg.Model = model
 			switch provider {
-			case "openai", "groq":
+			case "openai", "groq", "anthropic":
 				cfg.APIKey = apiKey
 			case "ollama":
 				cfg.APIKey = "ollama"
@@ -239,7 +239,7 @@ func runSetup(args []string) int {
 	cfg.Provider = provider
 	cfg.Model = model
 	switch provider {
-	case "openai", "groq":
+	case "openai", "groq", "anthropic":
 		cfg.APIKey = apiKey
 	case "ollama":
 		cfg.APIKey = "ollama"
@@ -328,7 +328,7 @@ func runConfig(args []string) int {
 				cfg.APIKey = "mock"
 			case "ollama":
 				cfg.APIKey = "ollama"
-			case "openai", "groq":
+			case "openai", "groq", "anthropic":
 				if strings.TrimSpace(cfg.APIKey) == "" {
 					fmt.Fprintf(os.Stderr, "API key is required for provider %s (pass --api-key or set env var)\n", cfg.Provider)
 					return 2

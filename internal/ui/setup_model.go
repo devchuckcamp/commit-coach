@@ -34,14 +34,14 @@ type SetupModel struct {
 	mode setupMode
 	step setupStep
 
-	providers       []string
-	providerIndex   int
-	provider        string
-	models          []string
-	modelIndex      int
-	model           string
-	apiKeyInput     textinput.Model
-	ollamaURL       string
+	providers     []string
+	providerIndex int
+	provider      string
+	models        []string
+	modelIndex    int
+	model         string
+	apiKeyInput   textinput.Model
+	ollamaURL     string
 
 	completed bool
 
@@ -49,7 +49,7 @@ type SetupModel struct {
 }
 
 func NewSetup(cfg *config.Config) *SetupModel {
-	providers := []string{"openai", "groq", "ollama", "mock"}
+	providers := []string{"openai", "anthropic", "groq", "ollama", "mock"}
 
 	keyIn := textinput.New()
 	keyIn.Prompt = "API key: "
@@ -94,16 +94,16 @@ func NewSetup(cfg *config.Config) *SetupModel {
 	}
 
 	return &SetupModel{
-		mode:           setupModeStandalone,
-		step:           setupStepProvider,
-		providers:      providers,
-		providerIndex:  providerIndex,
-		provider:       provider,
-		models:         models,
-		modelIndex:     modelIndex,
-		model:          model,
-		apiKeyInput:    keyIn,
-		ollamaURL:      ollamaURL,
+		mode:          setupModeStandalone,
+		step:          setupStepProvider,
+		providers:     providers,
+		providerIndex: providerIndex,
+		provider:      provider,
+		models:        models,
+		modelIndex:    modelIndex,
+		model:         model,
+		apiKeyInput:   keyIn,
+		ollamaURL:     ollamaURL,
 	}
 }
 
@@ -345,7 +345,7 @@ func (m *SetupModel) viewConfirm() string {
 	apiKey := strings.TrimSpace(m.apiKeyInput.Value())
 
 	apiKeyStatus := "(not required)"
-	if provider == "openai" || provider == "groq" {
+	if provider == "openai" || provider == "groq" || provider == "anthropic" {
 		apiKeyStatus = maskSecret(apiKey)
 	}
 
@@ -376,6 +376,12 @@ func (m *SetupModel) buildRuntimeConfig() (*config.Config, error) {
 			return nil, fmt.Errorf("API key is required for openai")
 		}
 		return &config.Config{Provider: provider, Model: model, APIKey: key}, nil
+	case "anthropic":
+		key := strings.TrimSpace(m.apiKeyInput.Value())
+		if key == "" {
+			return nil, fmt.Errorf("API key is required for anthropic")
+		}
+		return &config.Config{Provider: provider, Model: model, APIKey: key}, nil
 	case "groq":
 		key := strings.TrimSpace(m.apiKeyInput.Value())
 		if key == "" {
@@ -392,7 +398,7 @@ func (m *SetupModel) buildRuntimeConfig() (*config.Config, error) {
 }
 
 func nextStepAfterModel(provider string) setupStep {
-	if provider == "openai" || provider == "groq" {
+	if provider == "openai" || provider == "groq" || provider == "anthropic" {
 		return setupStepAPIKey
 	}
 	return setupStepConfirm

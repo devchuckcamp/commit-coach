@@ -3,6 +3,11 @@ package config
 // ProviderModels lists supported model options per provider.
 // Used by the interactive installer UI.
 var ProviderModels = map[string][]string{
+	"anthropic": {
+		"claude-3-5-sonnet-latest",
+		"claude-3-5-haiku-latest",
+		"claude-3-opus-latest",
+	},
 	"groq": {
 		"llama-3.1-8b-instant",
 		"llama-3.3-70b-versatile",

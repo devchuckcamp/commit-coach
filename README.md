@@ -142,12 +142,13 @@ If you prefer non-interactive configuration, you can set environment variables:
 
 ```bash
 # Provider + model
-export LLM_PROVIDER="openai"          # openai|groq|ollama|mock (default: openai)
+export LLM_PROVIDER="openai"          # openai|anthropic|groq|ollama|mock (default: openai)
 export LLM_MODEL="gpt-4o-mini"        # default: gpt-4o-mini
 export LLM_TEMPERATURE="0.7"          # default: 0.7
 
 # Provider credentials / endpoints
 export OPENAI_API_KEY="sk-..."        # required for provider=openai
+export ANTHROPIC_API_KEY="..."        # required for provider=anthropic
 export GROQ_API_KEY="..."             # required for provider=groq
 export OPENAI_BASE_URL=""             # optional (default: empty)
 export OLLAMA_URL="http://localhost:11434"  # optional
