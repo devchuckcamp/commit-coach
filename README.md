@@ -248,7 +248,6 @@ The `ports.LLM` interface allows swapping providers (OpenAI, Groq, etc.) without
 ## Contributing
 
 Guidelines:
-- Follow agents.md for architecture and SOLID principles
 - All changes must pass `go test -race ./...`
 - Add unit tests for new logic
 - Use golden tests for prompt and output formatting
