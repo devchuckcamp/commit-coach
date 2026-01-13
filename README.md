@@ -240,11 +240,11 @@ The `ports.LLM` interface allows swapping providers (OpenAI, Groq, etc.) without
 - [x] Adapters: git, redaction, cache, LLM clients
 - [x] TUI: Bubble Tea UI with state machine
 - [x] Config & CLI: environment variables and flags
-- [ ] Full integration test with real LLM (opt-in)
-- [ ] Persistent cache with `~/.cache/commit-coach/`
-- [ ] Hook installation for git workflows
-- [ ] Support for Gemini and Claude providers
-- [ ] Prompt customization via config file
+- [x] Full integration test with real LLM (opt-in)
+- [x] Persistent cache with `~/.cache/commit-coach/`
+- [x] Hook installation for git workflows
+- [x] Support for Gemini and Claude providers
+- [x] Prompt customization via config file
 
 ## Contributing
 
