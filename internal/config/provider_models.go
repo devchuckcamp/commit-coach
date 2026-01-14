@@ -4,9 +4,12 @@ package config
 // Used by the interactive installer UI.
 var ProviderModels = map[string][]string{
 	"anthropic": {
-		"claude-3-5-sonnet-latest",
-		"claude-3-5-haiku-latest",
-		"claude-3-opus-latest",
+		"claude-sonnet-4-20250514",
+		"claude-opus-4-20250514",
+		"claude-3-5-sonnet-20241022",
+		"claude-3-5-haiku-20241022",
+		"claude-3-opus-20240229",
+		"claude-3-haiku-20240307",
 	},
 	"groq": {
 		"llama-3.1-8b-instant",
