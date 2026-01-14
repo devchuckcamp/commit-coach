@@ -102,3 +102,14 @@ func SaveToFile(path string, cfg *Config) error {
 
 	return nil
 }
+
+// DeleteConfig removes the config file at the given path.
+func DeleteConfig(path string) error {
+	if err := os.Remove(path); err != nil {
+		if os.IsNotExist(err) {
+			return nil // Already gone, not an error
+		}
+		return fmt.Errorf("remove config: %w", err)
+	}
+	return nil
+}

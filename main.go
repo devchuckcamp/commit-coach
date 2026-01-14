@@ -138,7 +138,7 @@ func printHelp() {
 	fmt.Fprintln(os.Stdout, "")
 	fmt.Fprintln(os.Stdout, "Commands:")
 	fmt.Fprintln(os.Stdout, "  setup [--provider P] [--model M] [--api-key K]")
-	fmt.Fprintln(os.Stdout, "  config [path|set --provider P --model M [--api-key K]]")
+	fmt.Fprintln(os.Stdout, "  config [path|set|reset]")
 	fmt.Fprintln(os.Stdout, "  suggest [--json]")
 	fmt.Fprintln(os.Stdout, "")
 	fmt.Fprintln(os.Stdout, "Common flags:")
@@ -274,9 +274,17 @@ func runConfig(args []string) int {
 			fmt.Fprintln(os.Stdout, "  commit-coach config")
 			fmt.Fprintln(os.Stdout, "  commit-coach config path")
 			fmt.Fprintln(os.Stdout, "  commit-coach config set --provider P --model M [--api-key K]")
+			fmt.Fprintln(os.Stdout, "  commit-coach config reset")
 			return 0
 		case "path":
 			fmt.Fprintln(os.Stdout, path)
+			return 0
+		case "reset":
+			if err := config.DeleteConfig(path); err != nil {
+				fmt.Fprintf(os.Stderr, "Failed to reset config: %v\n", err)
+				return 1
+			}
+			fmt.Fprintf(os.Stdout, "Config reset. Removed %s\n", path)
 			return 0
 		case "set":
 			var provider, model, apiKey string
