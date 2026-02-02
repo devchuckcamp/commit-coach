@@ -1,4 +1,4 @@
-module github.com/chuckie/commit-coach
+module github.com/devchuckcamp/commit-coach
 
 go 1.21
 

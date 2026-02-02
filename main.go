@@ -11,13 +11,13 @@ import (
 
 	tea "github.com/charmbracelet/bubbletea"
 
-	"github.com/chuckie/commit-coach/internal/adapters/cache"
-	"github.com/chuckie/commit-coach/internal/adapters/git"
-	"github.com/chuckie/commit-coach/internal/adapters/llm"
-	"github.com/chuckie/commit-coach/internal/app"
-	"github.com/chuckie/commit-coach/internal/config"
-	"github.com/chuckie/commit-coach/internal/observability"
-	"github.com/chuckie/commit-coach/internal/ui"
+	"github.com/devchuckcamp/commit-coach/internal/adapters/cache"
+	"github.com/devchuckcamp/commit-coach/internal/adapters/git"
+	"github.com/devchuckcamp/commit-coach/internal/adapters/llm"
+	"github.com/devchuckcamp/commit-coach/internal/app"
+	"github.com/devchuckcamp/commit-coach/internal/config"
+	"github.com/devchuckcamp/commit-coach/internal/observability"
+	"github.com/devchuckcamp/commit-coach/internal/ui"
 )
 
 func main() {

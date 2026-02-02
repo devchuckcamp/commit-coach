@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"sync"
 
-	"github.com/chuckie/commit-coach/internal/ports"
+	"github.com/devchuckcamp/commit-coach/internal/ports"
 )
 
 // InMemory is a simple in-memory cache protected by a mutex.

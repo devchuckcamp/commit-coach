@@ -4,10 +4,10 @@ import (
 	"context"
 	"testing"
 
-	"github.com/chuckie/commit-coach/internal/adapters/cache"
-	"github.com/chuckie/commit-coach/internal/app"
-	"github.com/chuckie/commit-coach/internal/ports"
-	"github.com/chuckie/commit-coach/internal/testutil"
+	"github.com/devchuckcamp/commit-coach/internal/adapters/cache"
+	"github.com/devchuckcamp/commit-coach/internal/app"
+	"github.com/devchuckcamp/commit-coach/internal/ports"
+	"github.com/devchuckcamp/commit-coach/internal/testutil"
 )
 
 func TestSuggestWorkflow(t *testing.T) {

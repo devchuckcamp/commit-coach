@@ -4,8 +4,8 @@ import (
 	"context"
 
 	tea "github.com/charmbracelet/bubbletea"
-	"github.com/chuckie/commit-coach/internal/config"
-	"github.com/chuckie/commit-coach/internal/domain"
+	"github.com/devchuckcamp/commit-coach/internal/config"
+	"github.com/devchuckcamp/commit-coach/internal/domain"
 )
 
 // cmdLoadSuggestions loads suggestions asynchronously.

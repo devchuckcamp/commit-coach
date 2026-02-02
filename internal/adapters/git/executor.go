@@ -8,7 +8,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/chuckie/commit-coach/internal/ports"
+	"github.com/devchuckcamp/commit-coach/internal/ports"
 )
 
 // Executor implements ports.Git using os/exec.

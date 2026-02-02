@@ -11,8 +11,8 @@ import (
 	"strings"
 	"time"
 
-	"github.com/chuckie/commit-coach/internal/observability"
-	"github.com/chuckie/commit-coach/internal/ports"
+	"github.com/devchuckcamp/commit-coach/internal/observability"
+	"github.com/devchuckcamp/commit-coach/internal/ports"
 )
 
 // Client implements ports.LLM for Groq API (OpenAI-compatible).

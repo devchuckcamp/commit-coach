@@ -3,7 +3,7 @@ package testutil
 import (
 	"strings"
 
-	"github.com/chuckie/commit-coach/internal/ports"
+	"github.com/devchuckcamp/commit-coach/internal/ports"
 )
 
 // SampleDiffSmall is a small sample diff for testing.

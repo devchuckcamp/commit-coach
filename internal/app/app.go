@@ -7,9 +7,9 @@ import (
 	"io"
 	"time"
 
-	"github.com/chuckie/commit-coach/internal/domain"
-	"github.com/chuckie/commit-coach/internal/ports"
-	"github.com/chuckie/commit-coach/internal/security"
+	"github.com/devchuckcamp/commit-coach/internal/domain"
+	"github.com/devchuckcamp/commit-coach/internal/ports"
+	"github.com/devchuckcamp/commit-coach/internal/security"
 )
 
 // SuggestService generates commit suggestions.

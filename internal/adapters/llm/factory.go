@@ -3,12 +3,12 @@ package llm
 import (
 	"fmt"
 
-	"github.com/chuckie/commit-coach/internal/adapters/llm/anthropic"
-	"github.com/chuckie/commit-coach/internal/adapters/llm/groq"
-	"github.com/chuckie/commit-coach/internal/adapters/llm/mock"
-	"github.com/chuckie/commit-coach/internal/adapters/llm/ollama"
-	"github.com/chuckie/commit-coach/internal/adapters/llm/openai"
-	"github.com/chuckie/commit-coach/internal/ports"
+	"github.com/devchuckcamp/commit-coach/internal/adapters/llm/anthropic"
+	"github.com/devchuckcamp/commit-coach/internal/adapters/llm/groq"
+	"github.com/devchuckcamp/commit-coach/internal/adapters/llm/mock"
+	"github.com/devchuckcamp/commit-coach/internal/adapters/llm/ollama"
+	"github.com/devchuckcamp/commit-coach/internal/adapters/llm/openai"
+	"github.com/devchuckcamp/commit-coach/internal/ports"
 )
 
 // NewFromConfig creates a new LLM provider from configuration.

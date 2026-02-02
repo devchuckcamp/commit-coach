@@ -7,7 +7,7 @@ import (
 	"sync"
 	"unicode/utf8"
 
-	"github.com/chuckie/commit-coach/internal/security"
+	"github.com/devchuckcamp/commit-coach/internal/security"
 )
 
 var (

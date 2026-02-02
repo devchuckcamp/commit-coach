@@ -8,7 +8,7 @@ import (
 	"github.com/charmbracelet/bubbles/textinput"
 	tea "github.com/charmbracelet/bubbletea"
 
-	"github.com/chuckie/commit-coach/internal/config"
+	"github.com/devchuckcamp/commit-coach/internal/config"
 )
 
 type setupStep int

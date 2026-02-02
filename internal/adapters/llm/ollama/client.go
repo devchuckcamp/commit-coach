@@ -10,8 +10,8 @@ import (
 	"net/http"
 	"strings"
 
-	"github.com/chuckie/commit-coach/internal/observability"
-	"github.com/chuckie/commit-coach/internal/ports"
+	"github.com/devchuckcamp/commit-coach/internal/observability"
+	"github.com/devchuckcamp/commit-coach/internal/ports"
 )
 
 // Client is an Ollama LLM client for local inference.

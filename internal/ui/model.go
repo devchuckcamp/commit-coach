@@ -8,10 +8,10 @@ import (
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
 
-	"github.com/chuckie/commit-coach/internal/app"
-	"github.com/chuckie/commit-coach/internal/config"
-	"github.com/chuckie/commit-coach/internal/domain"
-	"github.com/chuckie/commit-coach/internal/ports"
+	"github.com/devchuckcamp/commit-coach/internal/app"
+	"github.com/devchuckcamp/commit-coach/internal/config"
+	"github.com/devchuckcamp/commit-coach/internal/domain"
+	"github.com/devchuckcamp/commit-coach/internal/ports"
 )
 
 // Model is the main Bubble Tea model.
