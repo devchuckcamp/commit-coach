@@ -188,10 +188,133 @@ func (c *CommitService) Commit(ctx context.Context, message string, dryRun bool)
 	return hash, nil
 }
 
+// AnalyzeService handles file relation analysis.
+type AnalyzeService struct {
+	llm      ports.LLM
+	git      ports.Git
+	redactor ports.Redactor
+	diffCap  int
+	timeout  time.Duration
+}
+
+// NewAnalyzeService creates a new analyze service.
+func NewAnalyzeService(llm ports.LLM, git ports.Git, redactor ports.Redactor, diffCap int) *AnalyzeService {
+	return &AnalyzeService{
+		llm:      llm,
+		git:      git,
+		redactor: redactor,
+		diffCap:  diffCap,
+		timeout:  60 * time.Second,
+	}
+}
+
+// AnalyzeFiles analyzes if staged files belong in the same commit.
+// Returns nil (not an error) if analysis should be skipped (e.g., <= 1 file).
+// On LLM failure, returns a homogeneous result (graceful degradation).
+func (a *AnalyzeService) AnalyzeFiles(ctx context.Context, model string, temperature float32) (*ports.FileAnalysisResult, []ports.StagedFile, error) {
+	ctx, cancel := context.WithTimeout(ctx, a.timeout)
+	defer cancel()
+
+	// Get staged files
+	files, err := a.git.StagedFiles(ctx)
+	if err != nil {
+		return nil, nil, fmt.Errorf("failed to get staged files: %w", err)
+	}
+
+	// Skip analysis if <= 1 file
+	if len(files) <= 1 {
+		return nil, files, nil
+	}
+
+	// Get diff for context
+	diff, err := a.git.StagedDiff(ctx)
+	if err != nil {
+		return nil, files, fmt.Errorf("failed to get staged diff: %w", err)
+	}
+
+	// Cap and redact diff
+	cappedDiff := a.capDiff(diff, a.diffCap)
+	redactedDiff := a.redactor.Redact(cappedDiff)
+
+	// Build input
+	input := ports.FileAnalysisInput{
+		Files:       files,
+		DiffContent: redactedDiff,
+		Model:       model,
+		Temperature: temperature,
+	}
+
+	// Call LLM for analysis
+	result, err := a.llm.AnalyzeFileRelations(ctx, input)
+	if err != nil {
+		// Graceful degradation: on LLM failure, assume files are related
+		allFiles := make([]string, len(files))
+		for i, f := range files {
+			allFiles[i] = f.Path
+		}
+		return &ports.FileAnalysisResult{
+			IsHomogeneous: true,
+			Groups: []ports.FileGroup{
+				{
+					Label:      "All staged files",
+					Files:      allFiles,
+					Confidence: 0.5,
+				},
+			},
+			Reasoning: "Analysis unavailable; defaulting to homogeneous.",
+		}, files, nil
+	}
+
+	return result, files, nil
+}
+
+// SetLLM swaps the LLM implementation.
+func (a *AnalyzeService) SetLLM(llm ports.LLM) {
+	if llm == nil {
+		return
+	}
+	a.llm = llm
+}
+
+func (a *AnalyzeService) capDiff(diff string, maxBytes int) string {
+	if len(diff) <= maxBytes {
+		return diff
+	}
+	return diff[:maxBytes]
+}
+
+// UnstageService handles file unstaging.
+type UnstageService struct {
+	git     ports.Git
+	timeout time.Duration
+}
+
+// NewUnstageService creates a new unstage service.
+func NewUnstageService(git ports.Git) *UnstageService {
+	return &UnstageService{
+		git:     git,
+		timeout: 10 * time.Second,
+	}
+}
+
+// Unstage removes files from the staging area.
+func (u *UnstageService) Unstage(ctx context.Context, files []string) error {
+	ctx, cancel := context.WithTimeout(ctx, u.timeout)
+	defer cancel()
+
+	if len(files) == 0 {
+		return nil
+	}
+
+	return u.git.Unstage(ctx, files)
+}
+
 // App is the application container with all services.
 type App struct {
-	Suggest *SuggestService
-	Commit  *CommitService
+	Suggest  *SuggestService
+	Commit   *CommitService
+	Analyze  *AnalyzeService
+	Unstage  *UnstageService
 	Redactor ports.Redactor
 }
 
@@ -199,8 +322,10 @@ type App struct {
 func NewApp(llm ports.LLM, git ports.Git, cache ports.Cache, diffCap int, useCache bool) *App {
 	redactor := security.NewRedactor()
 	return &App{
-		Suggest: NewSuggestService(llm, git, redactor, cache, diffCap, useCache),
-		Commit:  NewCommitService(git),
+		Suggest:  NewSuggestService(llm, git, redactor, cache, diffCap, useCache),
+		Commit:   NewCommitService(git),
+		Analyze:  NewAnalyzeService(llm, git, redactor, diffCap),
+		Unstage:  NewUnstageService(git),
 		Redactor: redactor,
 	}
 }

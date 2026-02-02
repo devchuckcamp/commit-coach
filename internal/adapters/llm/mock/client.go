@@ -58,3 +58,48 @@ func hashString(s string) uint64 {
 	return h.Sum64()
 }
 
+// AnalyzeFileRelations returns deterministic mock file analysis results.
+func (c *Client) AnalyzeFileRelations(ctx context.Context, input ports.FileAnalysisInput) (*ports.FileAnalysisResult, error) {
+	// Deterministic based on file count
+	// If more than 3 files, mark as non-homogeneous for testing purposes
+	isHomogeneous := len(input.Files) <= 3
+
+	// Build a single group with all files
+	files := make([]string, len(input.Files))
+	for i, f := range input.Files {
+		files[i] = f.Path
+	}
+
+	result := &ports.FileAnalysisResult{
+		IsHomogeneous: isHomogeneous,
+		Groups: []ports.FileGroup{
+			{
+				Label:      "All staged changes",
+				Files:      files,
+				Confidence: 0.85,
+			},
+		},
+		Reasoning: "Mock analysis: files appear related based on staging context.",
+	}
+
+	// If not homogeneous, create multiple groups for testing
+	if !isHomogeneous && len(input.Files) > 1 {
+		mid := len(input.Files) / 2
+		result.Groups = []ports.FileGroup{
+			{
+				Label:      "Group 1",
+				Files:      files[:mid],
+				Confidence: 0.8,
+			},
+			{
+				Label:      "Group 2",
+				Files:      files[mid:],
+				Confidence: 0.75,
+			},
+		}
+		result.Reasoning = "Mock analysis: files appear to belong to different logical changes."
+	}
+
+	return result, nil
+}
+

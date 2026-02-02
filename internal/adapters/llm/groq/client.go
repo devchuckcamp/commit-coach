@@ -379,4 +379,152 @@ func firstJSONObject(s string) (string, bool) {
 	return "", false
 }
 
+// AnalyzeFileRelations analyzes if staged files belong in the same commit.
+func (c *Client) AnalyzeFileRelations(ctx context.Context, input ports.FileAnalysisInput) (*ports.FileAnalysisResult, error) {
+	prompt := buildFileAnalysisPrompt(input)
+
+	temp := input.Temperature
+	if temp > 0.2 {
+		temp = 0.2
+	}
+
+	reqBody := map[string]interface{}{
+		"model":           c.model,
+		"response_format": map[string]string{"type": "json_object"},
+		"messages": []map[string]string{
+			{
+				"role":    "system",
+				"content": "You are an expert at analyzing code changes. Return ONLY valid JSON matching the requested schema. No markdown, no extra text.",
+			},
+			{
+				"role":    "user",
+				"content": prompt,
+			},
+		},
+		"temperature": temp,
+		"max_tokens":  1000,
+	}
+
+	jsonBody, err := json.Marshal(reqBody)
+	if err != nil {
+		return nil, fmt.Errorf("failed to marshal request: %w", err)
+	}
+
+	req, err := http.NewRequestWithContext(ctx, "POST", c.baseURL+"/chat/completions", bytes.NewReader(jsonBody))
+	if err != nil {
+		return nil, fmt.Errorf("failed to create request: %w", err)
+	}
+
+	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("Authorization", fmt.Sprintf("Bearer %s", c.apiKey))
+
+	resp, err := c.http.Do(req)
+	if err != nil {
+		return nil, fmt.Errorf("failed to call Groq API: %w", err)
+	}
+	defer resp.Body.Close()
+
+	body, readErr := io.ReadAll(resp.Body)
+	if readErr != nil {
+		return nil, fmt.Errorf("failed to read response: %w", readErr)
+	}
+
+	if resp.StatusCode != http.StatusOK {
+		observability.Logger().Printf(
+			"groq: file analysis non-200 status=%d model=%q body_snip=%q",
+			resp.StatusCode,
+			c.model,
+			observability.Snip(string(body), 600),
+		)
+		return nil, fmt.Errorf("groq returned status %d: %s", resp.StatusCode, string(body))
+	}
+
+	var respData struct {
+		Choices []struct {
+			Message struct {
+				Content *string `json:"content"`
+			} `json:"message"`
+		} `json:"choices"`
+	}
+
+	if err := json.Unmarshal(body, &respData); err != nil {
+		return nil, fmt.Errorf("failed to parse response: %w", err)
+	}
+
+	if len(respData.Choices) == 0 {
+		return nil, fmt.Errorf("no choices in response")
+	}
+
+	content := ""
+	if respData.Choices[0].Message.Content != nil {
+		content = strings.TrimSpace(*respData.Choices[0].Message.Content)
+	}
+	if content == "" {
+		return nil, fmt.Errorf("groq returned empty assistant output")
+	}
+
+	return parseFileAnalysisJSON(extractJSON(content))
+}
+
+func buildFileAnalysisPrompt(input ports.FileAnalysisInput) string {
+	var fileList string
+	for _, f := range input.Files {
+		fileList += fmt.Sprintf("  %s %s\n", f.Status, f.Path)
+	}
+
+	return fmt.Sprintf(`Analyze if these staged files belong in the same commit.
+
+<files>
+%s</files>
+
+<diff>
+%s
+</diff>
+
+Return ONLY a single JSON object with this exact shape:
+{"isHomogeneous":true/false,"groups":[{"label":"...","files":["path1","path2"],"confidence":0.9}],"reasoning":"..."}
+
+Rules:
+- isHomogeneous: true if all files are logically related for a single commit
+- groups: logical groupings of related files (at least 1 group)
+- confidence: 0.0-1.0
+- Be conservative: if files could reasonably go together, mark as homogeneous
+`, fileList, input.DiffContent)
+}
+
+func parseFileAnalysisJSON(content string) (*ports.FileAnalysisResult, error) {
+	var resp struct {
+		IsHomogeneous bool `json:"isHomogeneous"`
+		Groups        []struct {
+			Label      string   `json:"label"`
+			Files      []string `json:"files"`
+			Confidence float32  `json:"confidence"`
+		} `json:"groups"`
+		Reasoning string `json:"reasoning"`
+	}
+
+	if err := json.Unmarshal([]byte(content), &resp); err != nil {
+		observability.Logger().Printf(
+			"groq: invalid file analysis JSON: %v; content_snip=%q",
+			err,
+			observability.Snip(content, 600),
+		)
+		return nil, fmt.Errorf("invalid JSON format: %w", err)
+	}
+
+	result := &ports.FileAnalysisResult{
+		IsHomogeneous: resp.IsHomogeneous,
+		Reasoning:     resp.Reasoning,
+	}
+
+	for _, g := range resp.Groups {
+		result.Groups = append(result.Groups, ports.FileGroup{
+			Label:      g.Label,
+			Files:      g.Files,
+			Confidence: g.Confidence,
+		})
+	}
+
+	return result, nil
+}
 

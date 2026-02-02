@@ -180,6 +180,7 @@ Other commands:
 ./commit-coach config
 ./commit-coach config path
 ./commit-coach config set --provider openai --model gpt-4o-mini --api-key sk-...
+./commit-coach config reset
 ./commit-coach suggest
 ./commit-coach suggest --json
 ```

@@ -118,6 +118,11 @@ func (m *SetupModel) Init() tea.Cmd {
 }
 
 func (m *SetupModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
+	// If already done in standalone mode, quit immediately
+	if m.step == setupStepDone && m.mode == setupModeStandalone {
+		return m, tea.Quit
+	}
+
 	switch msg := msg.(type) {
 	case tea.KeyMsg:
 		// Clear any previous validation error on input/navigation.

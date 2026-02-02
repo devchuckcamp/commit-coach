@@ -35,6 +35,13 @@ type Model struct {
 	height        int
 	err           error
 	lastHash      string
+
+	// File review state
+	stagedFiles    []ports.StagedFile
+	fileGroups     []ports.FileGroup
+	selectedFiles  map[string]bool // path -> include in commit
+	fileListCursor int
+	analysisResult *ports.FileAnalysisResult
 }
 
 // State represents the current UI state.
@@ -42,6 +49,7 @@ type State int
 
 const (
 	StateLoading State = iota
+	StateFileReview
 	StateSetup
 	StateList
 	StateEdit
@@ -73,9 +81,9 @@ func New(app *app.App, provider, model string, temperature float32, baseURL, oll
 	}
 }
 
-// Init initializes the model and starts the suggestion loading.
+// Init initializes the model and starts the file analysis.
 func (m *Model) Init() tea.Cmd {
-	return tea.Batch(m.spinner.Tick, m.cmdLoadSuggestions)
+	return tea.Batch(m.spinner.Tick, m.cmdAnalyzeFiles)
 }
 
 // Update handles messages and state transitions.
@@ -99,6 +107,13 @@ func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		switch m.state {
 		case StateLoading:
 			// No keys during loading
+
+		case StateFileReview:
+			m2, cmd := m.handleFileReviewKeys(msg)
+			if cmd != nil {
+				return m2, cmd
+			}
+			m = m2
 
 		case StateSetup:
 			if m.setup == nil {
@@ -208,6 +223,7 @@ func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			return m, nil
 		}
 		m.app.Suggest.SetLLM(llm)
+		m.app.Analyze.SetLLM(llm)
 		m.state = StateLoading
 		return m, m.cmdLoadSuggestions
 
@@ -215,6 +231,41 @@ func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		if m.state == StateSuccess {
 			return m, tea.Quit
 		}
+
+	case msgFileAnalysisComplete:
+		if msg.err != nil {
+			m.state = StateError
+			m.err = msg.err
+			return m, nil
+		}
+
+		m.stagedFiles = msg.files
+		m.analysisResult = msg.result
+
+		// If no result (skipped) or files are homogeneous, proceed to suggestions
+		if msg.result == nil || msg.result.IsHomogeneous {
+			m.state = StateLoading
+			return m, m.cmdLoadSuggestions
+		}
+
+		// Files appear unrelated, show file review
+		m.fileGroups = msg.result.Groups
+		m.selectedFiles = make(map[string]bool)
+		for _, f := range m.stagedFiles {
+			m.selectedFiles[f.Path] = true // Select all by default
+		}
+		m.fileListCursor = 0
+		m.state = StateFileReview
+
+	case msgUnstageComplete:
+		if msg.err != nil {
+			m.state = StateError
+			m.err = msg.err
+			return m, nil
+		}
+		// After unstaging, proceed to load suggestions
+		m.state = StateLoading
+		return m, m.cmdLoadSuggestions
 	}
 
 	return m, nil
@@ -225,6 +276,8 @@ func (m *Model) View() string {
 	switch m.state {
 	case StateLoading:
 		return m.viewLoading()
+	case StateFileReview:
+		return m.viewFileReview()
 	case StateSetup:
 		if m.setup == nil {
 			m.setup = NewSetupEmbedded(&config.Config{Provider: m.provider, Model: m.model, OllamaURL: m.ollamaURL})
@@ -318,3 +371,13 @@ type msgSetupFinished struct {
 }
 
 type msgAutoQuit struct{}
+
+type msgFileAnalysisComplete struct {
+	result *ports.FileAnalysisResult
+	files  []ports.StagedFile
+	err    error
+}
+
+type msgUnstageComplete struct {
+	err error
+}

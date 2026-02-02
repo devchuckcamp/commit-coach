@@ -11,9 +11,11 @@ import (
 
 // FakeLLM is a deterministic fake LLM for testing.
 type FakeLLM struct {
-	Suggestions []ports.CommitSuggestion
-	Err         error
-	CallCount   int
+	Suggestions        []ports.CommitSuggestion
+	Err                error
+	CallCount          int
+	FileAnalysisResult *ports.FileAnalysisResult
+	FileAnalysisErr    error
 }
 
 func (f *FakeLLM) SuggestCommits(ctx context.Context, input ports.SuggestInput) ([]ports.CommitSuggestion, error) {
@@ -24,13 +26,42 @@ func (f *FakeLLM) SuggestCommits(ctx context.Context, input ports.SuggestInput) 
 	return f.Suggestions, nil
 }
 
+func (f *FakeLLM) AnalyzeFileRelations(ctx context.Context, input ports.FileAnalysisInput) (*ports.FileAnalysisResult, error) {
+	if f.FileAnalysisErr != nil {
+		return nil, f.FileAnalysisErr
+	}
+	if f.FileAnalysisResult != nil {
+		return f.FileAnalysisResult, nil
+	}
+	// Default: return homogeneous result
+	files := make([]string, len(input.Files))
+	for i, f := range input.Files {
+		files[i] = f.Path
+	}
+	return &ports.FileAnalysisResult{
+		IsHomogeneous: true,
+		Groups: []ports.FileGroup{
+			{
+				Label:      "All files",
+				Files:      files,
+				Confidence: 0.9,
+			},
+		},
+		Reasoning: "Fake analysis: files are related.",
+	}, nil
+}
+
 // FakeGit is a fake git adapter for testing.
 type FakeGit struct {
-	StagedDiffContent string
-	StagedDiffErr     error
-	CommittedMessages []string
-	CommitErr         error
-	IsInRepoValue     bool
+	StagedDiffContent  string
+	StagedDiffErr      error
+	CommittedMessages  []string
+	CommitErr          error
+	IsInRepoValue      bool
+	StagedFilesContent []ports.StagedFile
+	StagedFilesErr     error
+	UnstagedFiles      []string // tracks what was unstaged
+	UnstageErr         error
 }
 
 func (f *FakeGit) StagedDiff(ctx context.Context) (string, error) {
@@ -52,6 +83,21 @@ func (f *FakeGit) Commit(ctx context.Context, message string, dryRun bool) (stri
 
 func (f *FakeGit) IsInRepository(ctx context.Context) (bool, error) {
 	return f.IsInRepoValue, nil
+}
+
+func (f *FakeGit) StagedFiles(ctx context.Context) ([]ports.StagedFile, error) {
+	if f.StagedFilesErr != nil {
+		return nil, f.StagedFilesErr
+	}
+	return f.StagedFilesContent, nil
+}
+
+func (f *FakeGit) Unstage(ctx context.Context, files []string) error {
+	if f.UnstageErr != nil {
+		return f.UnstageErr
+	}
+	f.UnstagedFiles = append(f.UnstagedFiles, files...)
+	return nil
 }
 
 // FakeRedactor is a fake redactor that does nothing.

@@ -7,6 +7,8 @@ import (
 	"os/exec"
 	"strings"
 	"time"
+
+	"github.com/chuckie/commit-coach/internal/ports"
 )
 
 // Executor implements ports.Git using os/exec.
@@ -107,4 +109,69 @@ func extractCommitHash(output string) string {
 		}
 	}
 	return ""
+}
+
+// StagedFiles returns a list of staged files with their status.
+// Uses git diff --cached --name-status to get status codes.
+func (e *Executor) StagedFiles(ctx context.Context) ([]ports.StagedFile, error) {
+	cmd := exec.CommandContext(ctx, "git", "diff", "--cached", "--name-status")
+	output, err := cmd.Output()
+	if err != nil {
+		return nil, fmt.Errorf("git diff --cached --name-status failed: %w", err)
+	}
+
+	lines := strings.Split(strings.TrimSpace(string(output)), "\n")
+	var files []ports.StagedFile
+
+	for _, line := range lines {
+		line = strings.TrimSpace(line)
+		if line == "" {
+			continue
+		}
+
+		// Format: "M\tpath/to/file" or "R100\told\tnew" for renames
+		parts := strings.Split(line, "\t")
+		if len(parts) < 2 {
+			continue
+		}
+
+		status := parts[0]
+		path := parts[1]
+
+		// Handle renames (R100 old new) - use the new path
+		if strings.HasPrefix(status, "R") && len(parts) >= 3 {
+			status = "R"
+			path = parts[2]
+		}
+
+		// Normalize status to single character
+		if len(status) > 1 {
+			status = string(status[0])
+		}
+
+		files = append(files, ports.StagedFile{
+			Path:   path,
+			Status: status,
+		})
+	}
+
+	return files, nil
+}
+
+// Unstage removes files from the staging area.
+// Uses git restore --staged for each file.
+func (e *Executor) Unstage(ctx context.Context, files []string) error {
+	if len(files) == 0 {
+		return nil
+	}
+
+	// Build command: git restore --staged -- file1 file2 ...
+	args := append([]string{"restore", "--staged", "--"}, files...)
+	cmd := exec.CommandContext(ctx, "git", args...)
+	output, err := cmd.CombinedOutput()
+	if err != nil {
+		return fmt.Errorf("git restore --staged failed: %s: %w", string(output), err)
+	}
+
+	return nil
 }
