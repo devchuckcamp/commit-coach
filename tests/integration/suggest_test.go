@@ -512,8 +512,9 @@ func TestGitStagedFilesError(t *testing.T) {
 		t.Fatal("Expected error when git staged files fails")
 	}
 
-	if !strings.Contains(err.Error(), "staged files") {
-		t.Errorf("Expected 'staged files' in error message, got: %v", err)
+	// Error message uses structured error format: "git staged-files failed: ..."
+	if !strings.Contains(err.Error(), "staged-files") && !strings.Contains(err.Error(), "staged files") {
+		t.Errorf("Expected 'staged-files' in error message, got: %v", err)
 	}
 }
 
