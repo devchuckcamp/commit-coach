@@ -10,7 +10,10 @@ import (
 
 // cmdAnalyzeFiles analyzes staged files asynchronously.
 func (m *Model) cmdAnalyzeFiles() tea.Msg {
-	ctx := context.Background()
+	ctx := m.ctx
+	if ctx == nil {
+		ctx = context.Background()
+	}
 	result, files, err := m.app.Analyze.AnalyzeFiles(ctx, m.model, m.temperature)
 	return msgFileAnalysisComplete{
 		result: result,
@@ -21,7 +24,10 @@ func (m *Model) cmdAnalyzeFiles() tea.Msg {
 
 // cmdUnstageFiles unstages the unselected files.
 func (m *Model) cmdUnstageFiles() tea.Msg {
-	ctx := context.Background()
+	ctx := m.ctx
+	if ctx == nil {
+		ctx = context.Background()
+	}
 
 	// Find files to unstage (those not selected)
 	var toUnstage []string

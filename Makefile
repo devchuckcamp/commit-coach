@@ -1,7 +1,7 @@
 .PHONY: build test test-race test-coverage clean help lint vet install uninstall
 
 BINARY_NAME=commit-coach
-MAIN_PKG=./cmd/aicommits
+MAIN_PKG=./
 
 help:
 	@echo "commit-coach Makefile targets:"

@@ -2,6 +2,7 @@ package ui
 
 import (
 	"context"
+	"strings"
 
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/devchuckcamp/commit-coach/internal/config"
@@ -10,7 +11,10 @@ import (
 
 // cmdLoadSuggestions loads suggestions asynchronously.
 func (m *Model) cmdLoadSuggestions() tea.Msg {
-	ctx := context.Background()
+	ctx := m.ctx
+	if ctx == nil {
+		ctx = context.Background()
+	}
 	suggestions, err := m.app.Suggest.SuggestCommits(ctx, m.provider, m.model, m.temperature)
 	return msgSuggestionsLoaded{
 		suggestions: suggestions,
@@ -27,7 +31,10 @@ func (m *Model) cmdCommit() tea.Msg {
 		}
 	}
 
-	ctx := context.Background()
+	ctx := m.ctx
+	if ctx == nil {
+		ctx = context.Background()
+	}
 	msg := m.suggestions[m.selectedIndex].Format()
 	hash, err := m.app.Commit.Commit(ctx, msg, m.dryRun)
 	return msgCommitComplete{
@@ -99,20 +106,71 @@ func (m *Model) handleEditKeys(msg tea.KeyMsg) (*Model, tea.Cmd) {
 }
 
 // parseEditedMessage attempts to parse edited message back into suggestion.
+// Parses conventional commit format: "type: subject\n\nbody\n\nfooter"
 func (m *Model) parseEditedMessage(text string) *domain.Suggestion {
-	// Simple parsing: "type: subject" or multiline with body
-	// For MVP, just update the subject if it's simple format
-	lines := len(text) > 0
-	if !lines {
+	text = strings.TrimSpace(text)
+	if text == "" {
 		return nil
 	}
 
-	// Return a minimal suggestion for now
-	// TODO: improve parsing
+	// Split into paragraphs (separated by blank lines)
+	paragraphs := strings.Split(text, "\n\n")
+
+	// First paragraph is "type: subject"
+	firstLine := strings.TrimSpace(paragraphs[0])
+	if firstLine == "" {
+		return nil
+	}
+
+	// Parse type and subject from first line
+	var commitType, subject string
+	if colonIdx := strings.Index(firstLine, ":"); colonIdx > 0 {
+		commitType = strings.TrimSpace(firstLine[:colonIdx])
+		subject = strings.TrimSpace(firstLine[colonIdx+1:])
+	} else {
+		// No colon found, treat entire line as subject with default type
+		commitType = "fix"
+		subject = firstLine
+	}
+
+	// Validate type against known types, fallback to "fix" if invalid
+	validType := false
+	for _, t := range domain.ValidCommitTypes {
+		if commitType == t {
+			validType = true
+			break
+		}
+	}
+	if !validType {
+		// Invalid type: prepend it to subject and use "fix"
+		subject = commitType + ": " + subject
+		commitType = "fix"
+	}
+
+	// Extract body and footer from remaining paragraphs
+	var body, footer string
+	for i := 1; i < len(paragraphs); i++ {
+		para := strings.TrimSpace(paragraphs[i])
+		if para == "" {
+			continue
+		}
+		// Check if this paragraph is a footer (BREAKING CHANGE:, Closes:, Refs:)
+		if strings.HasPrefix(para, "BREAKING CHANGE:") ||
+			strings.HasPrefix(para, "Closes:") ||
+			strings.HasPrefix(para, "Refs:") {
+			footer = para
+		} else if body == "" {
+			body = para
+		} else {
+			// Append additional body paragraphs
+			body = body + "\n\n" + para
+		}
+	}
+
 	return &domain.Suggestion{
-		Type:    "fix",
-		Subject: text,
-		Body:    "",
-		Footer:  "",
+		Type:    commitType,
+		Subject: subject,
+		Body:    body,
+		Footer:  footer,
 	}
 }

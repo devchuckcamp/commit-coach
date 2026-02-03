@@ -1,6 +1,7 @@
 package ui
 
 import (
+	"context"
 	"fmt"
 	"time"
 
@@ -36,6 +37,10 @@ type Model struct {
 	err           error
 	lastHash      string
 
+	// Context for cancellation of async operations
+	ctx       context.Context
+	cancelCtx context.CancelFunc
+
 	// File review state
 	stagedFiles    []ports.StagedFile
 	fileGroups     []ports.FileGroup
@@ -64,6 +69,8 @@ func New(app *app.App, provider, model string, temperature float32, baseURL, oll
 	s.Spinner = spinner.Dot
 	s.Style = lipgloss.NewStyle().Foreground(lipgloss.Color("205"))
 
+	ctx, cancel := context.WithCancel(context.Background())
+
 	return &Model{
 		app:           app,
 		state:         StateLoading,
@@ -78,6 +85,8 @@ func New(app *app.App, provider, model string, temperature float32, baseURL, oll
 		width:         80,
 		height:        24,
 		err:           nil,
+		ctx:           ctx,
+		cancelCtx:     cancel,
 	}
 }
 
@@ -96,9 +105,15 @@ func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case tea.KeyMsg:
 		switch msg.String() {
 		case "ctrl+c":
+			if m.cancelCtx != nil {
+				m.cancelCtx()
+			}
 			return m, tea.Quit
 		case "q":
 			if m.state != StateSetup {
+				if m.cancelCtx != nil {
+					m.cancelCtx()
+				}
 				return m, tea.Quit
 			}
 		}

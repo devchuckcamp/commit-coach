@@ -2,6 +2,7 @@ package security
 
 import (
 	"regexp"
+	"strconv"
 	"strings"
 )
 
@@ -71,5 +72,5 @@ func SummarizeRedactions(original, redacted string) string {
 		return "no redactions"
 	}
 	count := strings.Count(redacted, "[REDACTED]")
-	return "removed " + string(rune(count)) + " secret(s)"
+	return "removed " + strconv.Itoa(count) + " secret(s)"
 }

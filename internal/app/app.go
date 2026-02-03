@@ -4,7 +4,6 @@ import (
 	"context"
 	"crypto/sha256"
 	"fmt"
-	"io"
 	"time"
 
 	"github.com/devchuckcamp/commit-coach/internal/domain"
@@ -72,8 +71,15 @@ func (s *SuggestService) SuggestCommits(ctx context.Context, provider, model str
 	cappedDiff := s.capDiff(diff, s.diffCap)
 	redactedDiff := s.redactor.Redact(cappedDiff)
 
-	// Step 5: Build file list
-	fileList := []string{} // TODO: extract from diff
+	// Step 5: Build file list from staged files
+	stagedFiles, err := s.git.StagedFiles(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get staged files: %w", err)
+	}
+	fileList := make([]string, len(stagedFiles))
+	for i, f := range stagedFiles {
+		fileList[i] = f.Path
+	}
 
 	// Step 6: Call LLM
 	input := ports.SuggestInput{
@@ -114,11 +120,9 @@ func (s *SuggestService) SetLLM(llm ports.LLM) {
 // hashDiff computes a SHA256 hash of the diff plus a cache namespace.
 func (s *SuggestService) hashDiff(diff, provider, model string) string {
 	h := sha256.New()
-	io.WriteString(h, diff)
-	io.WriteString(h, "\nprovider=")
-	io.WriteString(h, provider)
-	io.WriteString(h, "\nmodel=")
-	io.WriteString(h, model)
+	// Combine all strings before hashing to avoid multiple writes
+	data := diff + "\nprovider=" + provider + "\nmodel=" + model
+	h.Write([]byte(data))
 	return fmt.Sprintf("%x", h.Sum(nil))
 }
 
