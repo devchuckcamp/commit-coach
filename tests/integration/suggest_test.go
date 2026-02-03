@@ -85,8 +85,9 @@ func TestSuggestWithCache(t *testing.T) {
 		t.Errorf("Expected 1 LLM call (cache hit), got %d", fakeLLM.CallCount)
 	}
 
-	if cacheAdapter.Size() != 1 {
-		t.Errorf("Expected 1 cached entry, got %d", cacheAdapter.Size())
+	size, _ := cacheAdapter.Size(ctx)
+	if size != 1 {
+		t.Errorf("Expected 1 cached entry, got %d", size)
 	}
 }
 
