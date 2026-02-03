@@ -6,7 +6,7 @@ An interactive terminal app for generating AI-powered Conventional Commit messag
 
 -  Generates 3 Conventional Commit suggestions based on staged changes
 -  Redacts secrets before sending diffs to LLM providers
--  Provider-agnostic: supports OpenAI and Groq (extensible)
+-  Provider-agnostic: supports OpenAI, Anthropic (Claude), Groq, Ollama, and Mock
 -  Lightweight Bubble Tea TUI with preview and edit support
 -  Atomic git commits with dry-run mode
 -  Optional caching by diff hash for faster regeneration
@@ -15,7 +15,7 @@ An interactive terminal app for generating AI-powered Conventional Commit messag
 ## Quick Start
 
 ### Prerequisites
-- Go 1.21+
+- Go 1.21+ (tested with Go 1.24)
 - An API key from OpenAI or Groq
 - Bash/Zsh shell (or WSL on Windows)
 
@@ -242,10 +242,14 @@ The `ports.LLM` interface allows swapping providers (OpenAI, Groq, etc.) without
 - [x] TUI: Bubble Tea UI with state machine
 - [x] Config & CLI: environment variables and flags
 - [x] Full integration test with real LLM (opt-in)
-- [x] Persistent cache with `~/.cache/commit-coach/`
-- [x] Hook installation for git workflows
-- [x] Support for Gemini and Claude providers
-- [x] Prompt customization via config file
+- [x] In-memory cache by diff hash
+- [x] Support for Claude (Anthropic) provider
+- [x] Support for Ollama (local LLM) provider
+- [x] File relation analysis for multi-file commits
+- [ ] Persistent cache with `~/.cache/commit-coach/`
+- [ ] Hook installation for git workflows
+- [ ] Support for Gemini provider
+- [ ] Prompt customization via config file
 
 ## Contributing
 
