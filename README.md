@@ -6,17 +6,17 @@ An interactive terminal app for generating AI-powered Conventional Commit messag
 
 -  Generates 3 Conventional Commit suggestions based on staged changes
 -  Redacts secrets before sending diffs to LLM providers
--  Provider-agnostic: supports OpenAI, Anthropic (Claude), Groq, Ollama, and Mock
+-  Provider-agnostic: supports OpenAI, Anthropic (Claude), Google Gemini, Groq, Ollama, and Mock
 -  Lightweight Bubble Tea TUI with preview and edit support
 -  Atomic git commits with dry-run mode
--  Optional caching by diff hash for faster regeneration
+-  Tiered caching (memory L1 + disk L2) by diff hash for faster regeneration
 -  Comprehensive test coverage with golden tests
 
 ## Quick Start
 
 ### Prerequisites
 - Go 1.21+ (tested with Go 1.24)
-- An API key from OpenAI or Groq
+- An API key from OpenAI, Anthropic, Gemini, or Groq
 - Bash/Zsh shell (or WSL on Windows)
 
 ### Installation
@@ -142,13 +142,14 @@ If you prefer non-interactive configuration, you can set environment variables:
 
 ```bash
 # Provider + model
-export LLM_PROVIDER="openai"          # openai|anthropic|groq|ollama|mock (default: openai)
+export LLM_PROVIDER="openai"          # openai|anthropic|gemini|groq|ollama|mock (default: openai)
 export LLM_MODEL="gpt-4o-mini"        # default: gpt-4o-mini
 export LLM_TEMPERATURE="0.7"          # default: 0.7
 
 # Provider credentials / endpoints
 export OPENAI_API_KEY="sk-..."        # required for provider=openai
 export ANTHROPIC_API_KEY="..."        # required for provider=anthropic
+export GEMINI_API_KEY="..."           # required for provider=gemini (or GOOGLE_API_KEY)
 export GROQ_API_KEY="..."             # required for provider=groq
 export OPENAI_BASE_URL=""             # optional (default: empty)
 export OLLAMA_URL="http://localhost:11434"  # optional
@@ -246,9 +247,9 @@ The `ports.LLM` interface allows swapping providers (OpenAI, Groq, etc.) without
 - [x] Support for Claude (Anthropic) provider
 - [x] Support for Ollama (local LLM) provider
 - [x] File relation analysis for multi-file commits
-- [ ] Persistent cache with `~/.cache/commit-coach/`
+- [x] Persistent cache with `~/.cache/commit-coach/`
+- [x] Support for Gemini provider
 - [ ] Hook installation for git workflows
-- [ ] Support for Gemini provider
 - [ ] Prompt customization via config file
 
 ## Contributing
