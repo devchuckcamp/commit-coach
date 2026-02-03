@@ -6,7 +6,9 @@ import (
 	"fmt"
 	"log"
 	"os"
+	"os/signal"
 	"strings"
+	"syscall"
 	"time"
 
 	tea "github.com/charmbracelet/bubbletea"
@@ -26,9 +28,23 @@ func main() {
 
 func run(args []string) int {
 	// Best-effort error logging to a local file.
+	var logCleanup func()
 	if _, cleanup, err := observability.Init(); err == nil {
+		logCleanup = cleanup
 		defer cleanup()
 	}
+
+	// Set up signal handling for graceful shutdown
+	sigChan := make(chan os.Signal, 1)
+	signal.Notify(sigChan, os.Interrupt, syscall.SIGTERM)
+	go func() {
+		<-sigChan
+		// Cleanup on signal
+		if logCleanup != nil {
+			logCleanup()
+		}
+		os.Exit(130) // 128 + SIGINT(2) = 130
+	}()
 
 	if len(args) >= 2 {
 		switch args[1] {

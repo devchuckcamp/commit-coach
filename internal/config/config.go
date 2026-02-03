@@ -8,6 +8,9 @@ import (
 	"strings"
 )
 
+// ValidProviders is the list of supported LLM providers.
+var ValidProviders = []string{"openai", "anthropic", "groq", "ollama", "mock"}
+
 // Config holds all application configuration.
 type Config struct {
 	Provider    string
@@ -21,6 +24,31 @@ type Config struct {
 	DryRun      bool
 	Redact      bool
 	UseCache    bool
+}
+
+// Validate checks if the config values are valid.
+// Returns nil if valid, or an error describing the first invalid value.
+func (c *Config) Validate() error {
+	if !isValidProvider(c.Provider) {
+		return fmt.Errorf("invalid provider %q; must be one of: %v", c.Provider, ValidProviders)
+	}
+	if c.Temperature < 0 || c.Temperature > 2 {
+		return fmt.Errorf("temperature must be between 0 and 2, got %.2f", c.Temperature)
+	}
+	if c.DiffCap <= 0 {
+		return fmt.Errorf("diff cap must be positive, got %d", c.DiffCap)
+	}
+	return nil
+}
+
+// isValidProvider checks if the provider name is valid.
+func isValidProvider(provider string) bool {
+	for _, p := range ValidProviders {
+		if provider == p {
+			return true
+		}
+	}
+	return false
 }
 
 // Load loads configuration with precedence:
@@ -102,25 +130,17 @@ func Load() (*Config, error) {
 		cfg.APIKey = "ollama"
 	}
 
-	// Validate
-	if cfg.Provider != "openai" && cfg.Provider != "anthropic" && cfg.Provider != "groq" && cfg.Provider != "mock" && cfg.Provider != "ollama" {
-		return nil, fmt.Errorf("invalid provider: %s (must be 'openai', 'anthropic', 'groq', 'mock', or 'ollama')", cfg.Provider)
+	// Validate config values
+	if err := cfg.Validate(); err != nil {
+		return nil, err
 	}
 
+	// Check API key requirement for cloud providers
 	if (cfg.Provider == "openai" || cfg.Provider == "groq" || cfg.Provider == "anthropic") && cfg.APIKey == "" {
-		// Anthropic uses ANTHROPIC_API_KEY (not PROVIDER_API_KEY like openai/groq), so keep the hint explicit.
 		if cfg.Provider == "anthropic" {
 			return cfg, fmt.Errorf("%w: API key not found for provider anthropic; set ANTHROPIC_API_KEY env var", ErrSetupRequired)
 		}
 		return cfg, fmt.Errorf("%w: API key not found for provider %s; set %s_API_KEY env var", ErrSetupRequired, cfg.Provider, strings.ToUpper(cfg.Provider))
-	}
-
-	if cfg.Temperature < 0 || cfg.Temperature > 2 {
-		return nil, fmt.Errorf("temperature must be between 0 and 2, got %.2f", cfg.Temperature)
-	}
-
-	if cfg.DiffCap <= 0 {
-		return nil, fmt.Errorf("diff cap must be positive, got %d", cfg.DiffCap)
 	}
 
 	return cfg, nil

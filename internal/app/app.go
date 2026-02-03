@@ -46,19 +46,19 @@ func (s *SuggestService) SuggestCommits(ctx context.Context, provider, model str
 	// Step 1: Check if in repository
 	inRepo, err := s.git.IsInRepository(ctx)
 	if err != nil {
-		return nil, fmt.Errorf("failed to check repository status: %w", err)
+		return nil, NewGitError("check-repository", err)
 	}
 	if !inRepo {
-		return nil, fmt.Errorf("not in a git repository")
+		return nil, ErrNotInRepository
 	}
 
 	// Step 2: Get staged diff
 	diff, err := s.git.StagedDiff(ctx)
 	if err != nil {
-		return nil, fmt.Errorf("failed to read staged diff: %w", err)
+		return nil, NewGitError("diff", err)
 	}
 	if diff == "" {
-		return nil, fmt.Errorf("no staged changes")
+		return nil, ErrNoStagedChanges
 	}
 
 	// Step 3: Check cache
@@ -76,7 +76,7 @@ func (s *SuggestService) SuggestCommits(ctx context.Context, provider, model str
 	// Step 5: Build file list from staged files
 	stagedFiles, err := s.git.StagedFiles(ctx)
 	if err != nil {
-		return nil, fmt.Errorf("failed to get staged files: %w", err)
+		return nil, NewGitError("staged-files", err)
 	}
 	fileList := make([]string, len(stagedFiles))
 	for i, f := range stagedFiles {
@@ -93,15 +93,16 @@ func (s *SuggestService) SuggestCommits(ctx context.Context, provider, model str
 
 	llmSuggestions, err := s.llm.SuggestCommits(ctx, input)
 	if err != nil {
-		observability.Logger().Printf("LLM error (provider=%s, model=%s): %v", provider, model, err)
-		return nil, fmt.Errorf("LLM error: %w", err)
+		llmErr := NewLLMError(provider, model, err)
+		observability.Logger().Printf("%v", llmErr)
+		return nil, llmErr
 	}
 
 	// Step 7: Validate suggestions
 	result, err := s.validateAndNormalize(llmSuggestions)
 	if err != nil {
 		observability.Logger().Printf("LLM returned invalid suggestions: %v", err)
-		return nil, fmt.Errorf("invalid suggestions from LLM: %w", err)
+		return nil, err // Already a structured error from validateAndNormalize
 	}
 
 	// Step 8: Cache result (best-effort: cache errors don't affect the user)
@@ -151,7 +152,7 @@ func (s *SuggestService) capDiff(diff string, maxBytes int) string {
 // validateAndNormalize converts port suggestions to domain suggestions with validation.
 func (s *SuggestService) validateAndNormalize(portSuggestions []ports.CommitSuggestion) ([]domain.Suggestion, error) {
 	if len(portSuggestions) < 3 {
-		return nil, fmt.Errorf("expected 3 suggestions, got %d", len(portSuggestions))
+		return nil, NewValidationError(-1, "count", fmt.Sprintf("expected 3 suggestions, got %d", len(portSuggestions)))
 	}
 
 	result := make([]domain.Suggestion, 3)
@@ -165,7 +166,7 @@ func (s *SuggestService) validateAndNormalize(portSuggestions []ports.CommitSugg
 		}
 		ds.Normalize()
 		if err := ds.Validate(); err != nil {
-			return nil, fmt.Errorf("suggestion %d validation failed: %w", i, err)
+			return nil, NewValidationError(i, "domain", err.Error())
 		}
 		result[i] = ds
 	}
@@ -194,14 +195,15 @@ func (c *CommitService) Commit(ctx context.Context, message string, dryRun bool)
 
 	// Validate message before attempting commit
 	if message == "" {
-		return "", fmt.Errorf("commit message cannot be empty")
+		return "", ErrEmptyMessage
 	}
 
 	// Attempt commit
 	hash, err = c.git.Commit(ctx, message, dryRun)
 	if err != nil {
-		observability.Logger().Printf("git commit failed: %v", err)
-		return "", fmt.Errorf("git commit failed: %w", err)
+		gitErr := NewGitError("commit", err)
+		observability.Logger().Printf("%v", gitErr)
+		return "", gitErr
 	}
 
 	return hash, nil
@@ -237,7 +239,7 @@ func (a *AnalyzeService) AnalyzeFiles(ctx context.Context, model string, tempera
 	// Get staged files
 	files, err := a.git.StagedFiles(ctx)
 	if err != nil {
-		return nil, nil, fmt.Errorf("failed to get staged files: %w", err)
+		return nil, nil, NewGitError("staged-files", err)
 	}
 
 	// Skip analysis if <= 1 file
@@ -248,7 +250,7 @@ func (a *AnalyzeService) AnalyzeFiles(ctx context.Context, model string, tempera
 	// Get diff for context
 	diff, err := a.git.StagedDiff(ctx)
 	if err != nil {
-		return nil, files, fmt.Errorf("failed to get staged diff: %w", err)
+		return nil, files, NewGitError("diff", err)
 	}
 
 	// Cap and redact diff

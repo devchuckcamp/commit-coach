@@ -162,3 +162,150 @@ func TestConfigDefaults(t *testing.T) {
 		t.Error("Default redact should be true")
 	}
 }
+
+func TestConfigValidate(t *testing.T) {
+	tests := []struct {
+		name      string
+		config    Config
+		expectErr bool
+		errMsg    string
+	}{
+		{
+			name: "valid config",
+			config: Config{
+				Provider:    "openai",
+				Temperature: 0.7,
+				DiffCap:     8192,
+			},
+			expectErr: false,
+		},
+		{
+			name: "valid anthropic",
+			config: Config{
+				Provider:    "anthropic",
+				Temperature: 1.0,
+				DiffCap:     4096,
+			},
+			expectErr: false,
+		},
+		{
+			name: "valid mock",
+			config: Config{
+				Provider:    "mock",
+				Temperature: 0.0,
+				DiffCap:     100,
+			},
+			expectErr: false,
+		},
+		{
+			name: "invalid provider",
+			config: Config{
+				Provider:    "gemini",
+				Temperature: 0.7,
+				DiffCap:     8192,
+			},
+			expectErr: true,
+			errMsg:    "invalid provider",
+		},
+		{
+			name: "empty provider",
+			config: Config{
+				Provider:    "",
+				Temperature: 0.7,
+				DiffCap:     8192,
+			},
+			expectErr: true,
+			errMsg:    "invalid provider",
+		},
+		{
+			name: "temperature too low",
+			config: Config{
+				Provider:    "openai",
+				Temperature: -0.5,
+				DiffCap:     8192,
+			},
+			expectErr: true,
+			errMsg:    "temperature",
+		},
+		{
+			name: "temperature too high",
+			config: Config{
+				Provider:    "openai",
+				Temperature: 2.5,
+				DiffCap:     8192,
+			},
+			expectErr: true,
+			errMsg:    "temperature",
+		},
+		{
+			name: "diff cap zero",
+			config: Config{
+				Provider:    "openai",
+				Temperature: 0.7,
+				DiffCap:     0,
+			},
+			expectErr: true,
+			errMsg:    "diff cap",
+		},
+		{
+			name: "diff cap negative",
+			config: Config{
+				Provider:    "openai",
+				Temperature: 0.7,
+				DiffCap:     -100,
+			},
+			expectErr: true,
+			errMsg:    "diff cap",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			err := tt.config.Validate()
+			if tt.expectErr {
+				if err == nil {
+					t.Error("expected error, got nil")
+				} else if tt.errMsg != "" && !contains(err.Error(), tt.errMsg) {
+					t.Errorf("expected error containing %q, got %q", tt.errMsg, err.Error())
+				}
+			} else {
+				if err != nil {
+					t.Errorf("unexpected error: %v", err)
+				}
+			}
+		})
+	}
+}
+
+func TestValidProviders(t *testing.T) {
+	expected := []string{"openai", "anthropic", "groq", "ollama", "mock"}
+	if len(ValidProviders) != len(expected) {
+		t.Errorf("ValidProviders has %d items, expected %d", len(ValidProviders), len(expected))
+	}
+	for _, p := range expected {
+		found := false
+		for _, vp := range ValidProviders {
+			if vp == p {
+				found = true
+				break
+			}
+		}
+		if !found {
+			t.Errorf("expected %q to be in ValidProviders", p)
+		}
+	}
+}
+
+func contains(s, substr string) bool {
+	return len(s) >= len(substr) && (s == substr || len(substr) == 0 ||
+		(len(s) > 0 && len(substr) > 0 && findSubstring(s, substr)))
+}
+
+func findSubstring(s, substr string) bool {
+	for i := 0; i <= len(s)-len(substr); i++ {
+		if s[i:i+len(substr)] == substr {
+			return true
+		}
+	}
+	return false
+}
