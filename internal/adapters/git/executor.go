@@ -8,6 +8,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/devchuckcamp/commit-coach/internal/observability"
 	"github.com/devchuckcamp/commit-coach/internal/ports"
 )
 
@@ -51,7 +52,8 @@ func (e *Executor) Commit(ctx context.Context, message string, dryRun bool) (str
 		return "", fmt.Errorf("failed to create temp file: %w", err)
 	}
 	defer func() {
-		// Always clean up temp file
+		// Best-effort cleanup: temp file removal errors are non-fatal
+		// as the OS will eventually clean up temp files
 		_ = os.Remove(tmpFile.Name())
 	}()
 
@@ -74,8 +76,10 @@ func (e *Executor) Commit(ctx context.Context, message string, dryRun bool) (str
 		// Get stderr for better error messages
 		if exitErr, ok := err.(*exec.ExitError); ok {
 			stderr := string(exitErr.Stderr)
+			observability.Logger().Printf("git commit failed (exit %d): %s", exitErr.ExitCode(), observability.Snip(stderr, 200))
 			return "", fmt.Errorf("git commit failed: %s", stderr)
 		}
+		observability.Logger().Printf("git commit error: %v", err)
 		return "", fmt.Errorf("git commit failed: %w", err)
 	}
 
@@ -91,8 +95,9 @@ func (e *Executor) Commit(ctx context.Context, message string, dryRun bool) (str
 
 // extractCommitHash attempts to extract the commit hash from git output.
 // Git output typically looks like: "[branch_name hash_part] message"
+// or "[detached HEAD hash_part] message" for detached HEAD state.
 func extractCommitHash(output string) string {
-	// Look for pattern like "[main abc123d]"
+	// Look for pattern like "[main abc123d]" or "[detached HEAD abc123d]"
 	lines := strings.Split(output, "\n")
 	for _, line := range lines {
 		if strings.Contains(line, "[") && strings.Contains(line, "]") {
@@ -103,7 +108,8 @@ func extractCommitHash(output string) string {
 				content := line[start+1 : end]
 				parts := strings.Fields(content)
 				if len(parts) >= 2 {
-					return parts[1]
+					// Return the last part (hash is always last in brackets)
+					return parts[len(parts)-1]
 				}
 			}
 		}

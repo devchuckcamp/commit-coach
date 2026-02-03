@@ -78,6 +78,8 @@ func SaveToFile(path string, cfg *Config) error {
 	}
 	tmpName := tmp.Name()
 	defer func() {
+		// Best-effort cleanup: close and remove temp file
+		// Errors here are non-fatal as the main file was already written
 		_ = tmp.Close()
 		_ = os.Remove(tmpName)
 	}()
@@ -95,10 +97,9 @@ func SaveToFile(path string, cfg *Config) error {
 	if err := os.Rename(tmpName, path); err != nil {
 		return fmt.Errorf("replace config: %w", err)
 	}
-	if err := os.Chmod(path, 0o600); err != nil {
-		// Best-effort; don't fail after successful rename.
-		_ = err
-	}
+	// Best-effort chmod: file was already written successfully,
+	// so don't fail the operation if permissions can't be set
+	_ = os.Chmod(path, 0o600)
 
 	return nil
 }

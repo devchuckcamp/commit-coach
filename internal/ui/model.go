@@ -212,9 +212,10 @@ func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			return m, nil
 		}
 
-		// Best-effort persistence so setup changes are remembered across runs.
+		// Best-effort persistence: save config so setup changes are remembered.
+		// Errors are ignored because the TUI flow should continue regardless.
 		if path, err := config.DefaultConfigPath(); err == nil {
-			persisted, _ := config.Load() // may be partially invalid; best-effort
+			persisted, _ := config.Load() // best-effort load; may be invalid
 			if persisted == nil {
 				persisted = &config.Config{}
 			}
@@ -228,7 +229,7 @@ func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			case "mock":
 				persisted.APIKey = "mock"
 			}
-			_ = config.SaveToFile(path, persisted) // ignore persistence errors in UI flow
+			_ = config.SaveToFile(path, persisted) // best-effort: don't block UI on save errors
 		}
 
 		llm, err := m.llmFactory(m.provider, apiKey, m.baseURL, m.ollamaURL, m.model)

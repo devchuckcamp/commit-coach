@@ -32,6 +32,7 @@ func Init() (path string, cleanup func(), err error) {
 
 		dir := filepath.Dir(logPath)
 		if dir != "." && dir != "" {
+			// Best-effort: if directory creation fails, OpenFile will fail with a clear error
 			_ = os.MkdirAll(dir, 0o755)
 		}
 

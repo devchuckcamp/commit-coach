@@ -4,9 +4,11 @@ import (
 	"context"
 	"crypto/sha256"
 	"fmt"
+	"strings"
 	"time"
 
 	"github.com/devchuckcamp/commit-coach/internal/domain"
+	"github.com/devchuckcamp/commit-coach/internal/observability"
 	"github.com/devchuckcamp/commit-coach/internal/ports"
 	"github.com/devchuckcamp/commit-coach/internal/security"
 )
@@ -91,18 +93,20 @@ func (s *SuggestService) SuggestCommits(ctx context.Context, provider, model str
 
 	llmSuggestions, err := s.llm.SuggestCommits(ctx, input)
 	if err != nil {
+		observability.Logger().Printf("LLM error (provider=%s, model=%s): %v", provider, model, err)
 		return nil, fmt.Errorf("LLM error: %w", err)
 	}
 
 	// Step 7: Validate suggestions
 	result, err := s.validateAndNormalize(llmSuggestions)
 	if err != nil {
+		observability.Logger().Printf("LLM returned invalid suggestions: %v", err)
 		return nil, fmt.Errorf("invalid suggestions from LLM: %w", err)
 	}
 
-	// Step 8: Cache result
+	// Step 8: Cache result (best-effort: cache errors don't affect the user)
 	if s.useCache && s.cache != nil {
-		_ = s.cache.Set(ctx, diffHash, llmSuggestions) // ignore cache errors
+		_ = s.cache.Set(ctx, diffHash, llmSuggestions)
 	}
 
 	return result, nil
@@ -126,12 +130,22 @@ func (s *SuggestService) hashDiff(diff, provider, model string) string {
 	return fmt.Sprintf("%x", h.Sum(nil))
 }
 
-// capDiff truncates diff to max size.
+// capDiff truncates diff to max size, breaking at line boundaries.
+// This ensures the LLM receives well-formed diff output.
 func (s *SuggestService) capDiff(diff string, maxBytes int) string {
 	if len(diff) <= maxBytes {
 		return diff
 	}
-	return diff[:maxBytes]
+
+	// Find the last newline before maxBytes to avoid truncating mid-line
+	truncated := diff[:maxBytes]
+	lastNewline := strings.LastIndex(truncated, "\n")
+	if lastNewline > 0 {
+		return diff[:lastNewline+1] // Include the newline
+	}
+
+	// No newline found (single very long line), fall back to byte truncation
+	return truncated
 }
 
 // validateAndNormalize converts port suggestions to domain suggestions with validation.
@@ -186,6 +200,7 @@ func (c *CommitService) Commit(ctx context.Context, message string, dryRun bool)
 	// Attempt commit
 	hash, err = c.git.Commit(ctx, message, dryRun)
 	if err != nil {
+		observability.Logger().Printf("git commit failed: %v", err)
 		return "", fmt.Errorf("git commit failed: %w", err)
 	}
 
@@ -252,6 +267,7 @@ func (a *AnalyzeService) AnalyzeFiles(ctx context.Context, model string, tempera
 	result, err := a.llm.AnalyzeFileRelations(ctx, input)
 	if err != nil {
 		// Graceful degradation: on LLM failure, assume files are related
+		observability.Logger().Printf("file analysis LLM error (graceful degradation): %v", err)
 		allFiles := make([]string, len(files))
 		for i, f := range files {
 			allFiles[i] = f.Path
@@ -266,6 +282,7 @@ func (a *AnalyzeService) AnalyzeFiles(ctx context.Context, model string, tempera
 				},
 			},
 			Reasoning: "Analysis unavailable; defaulting to homogeneous.",
+			Degraded:  true, // Indicate this is a fallback result
 		}, files, nil
 	}
 
@@ -284,7 +301,14 @@ func (a *AnalyzeService) capDiff(diff string, maxBytes int) string {
 	if len(diff) <= maxBytes {
 		return diff
 	}
-	return diff[:maxBytes]
+
+	// Find the last newline before maxBytes to avoid truncating mid-line
+	truncated := diff[:maxBytes]
+	lastNewline := strings.LastIndex(truncated, "\n")
+	if lastNewline > 0 {
+		return diff[:lastNewline+1]
+	}
+	return truncated
 }
 
 // UnstageService handles file unstaging.

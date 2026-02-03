@@ -115,9 +115,14 @@ func (m *Model) viewFileReview() string {
 	sb.WriteString("Warning: Staged files may be unrelated\n")
 	sb.WriteString("=========================================\n\n")
 
-	if m.analysisResult != nil && m.analysisResult.Reasoning != "" {
-		sb.WriteString(m.analysisResult.Reasoning)
-		sb.WriteString("\n\n")
+	if m.analysisResult != nil {
+		if m.analysisResult.Degraded {
+			sb.WriteString("(Note: Analysis unavailable, using defaults)\n\n")
+		}
+		if m.analysisResult.Reasoning != "" {
+			sb.WriteString(m.analysisResult.Reasoning)
+			sb.WriteString("\n\n")
+		}
 	}
 
 	sb.WriteString("Select files to include in this commit:\n\n")

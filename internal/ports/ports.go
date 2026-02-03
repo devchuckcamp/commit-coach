@@ -72,6 +72,7 @@ type FileAnalysisResult struct {
 	IsHomogeneous bool        // true if all files are related
 	Groups        []FileGroup // logical groupings
 	Reasoning     string      // explanation
+	Degraded      bool        // true if LLM failed and this is a fallback result
 }
 
 // FileAnalysisInput is the input for file relation analysis.
