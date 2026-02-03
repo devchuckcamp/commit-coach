@@ -198,9 +198,18 @@ func TestConfigValidate(t *testing.T) {
 			expectErr: false,
 		},
 		{
-			name: "invalid provider",
+			name: "valid gemini",
 			config: Config{
 				Provider:    "gemini",
+				Temperature: 0.7,
+				DiffCap:     8192,
+			},
+			expectErr: false,
+		},
+		{
+			name: "invalid provider",
+			config: Config{
+				Provider:    "unknown-provider",
 				Temperature: 0.7,
 				DiffCap:     8192,
 			},
@@ -278,7 +287,7 @@ func TestConfigValidate(t *testing.T) {
 }
 
 func TestValidProviders(t *testing.T) {
-	expected := []string{"openai", "anthropic", "groq", "ollama", "mock"}
+	expected := []string{"openai", "anthropic", "gemini", "groq", "ollama", "mock"}
 	if len(ValidProviders) != len(expected) {
 		t.Errorf("ValidProviders has %d items, expected %d", len(ValidProviders), len(expected))
 	}

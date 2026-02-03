@@ -11,6 +11,11 @@ var ProviderModels = map[string][]string{
 		"claude-3-opus-20240229",
 		"claude-3-haiku-20240307",
 	},
+	"gemini": {
+		"gemini-2.0-flash",
+		"gemini-1.5-pro",
+		"gemini-1.5-flash",
+	},
 	"groq": {
 		"llama-3.1-8b-instant",
 		"llama-3.3-70b-versatile",

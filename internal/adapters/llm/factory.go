@@ -4,6 +4,7 @@ import (
 	"fmt"
 
 	"github.com/devchuckcamp/commit-coach/internal/adapters/llm/anthropic"
+	"github.com/devchuckcamp/commit-coach/internal/adapters/llm/gemini"
 	"github.com/devchuckcamp/commit-coach/internal/adapters/llm/groq"
 	"github.com/devchuckcamp/commit-coach/internal/adapters/llm/mock"
 	"github.com/devchuckcamp/commit-coach/internal/adapters/llm/ollama"
@@ -18,6 +19,8 @@ func NewFromConfig(provider, apiKey, baseURL, ollamaURL, model string) (ports.LL
 		return openai.NewClient(apiKey, baseURL)
 	case "anthropic":
 		return anthropic.NewClient(apiKey)
+	case "gemini":
+		return gemini.NewClient(apiKey, model)
 	case "groq":
 		return groq.NewClient(apiKey, model), nil
 	case "ollama":

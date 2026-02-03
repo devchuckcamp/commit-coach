@@ -82,14 +82,16 @@ func TestInMemory_Clear(t *testing.T) {
 	cache.Set(ctx, "key1", []ports.CommitSuggestion{{Type: "feat", Subject: "a"}})
 	cache.Set(ctx, "key2", []ports.CommitSuggestion{{Type: "fix", Subject: "b"}})
 
-	if cache.Size() != 2 {
-		t.Errorf("expected size 2, got %d", cache.Size())
+	size, _ := cache.Size(ctx)
+	if size != 2 {
+		t.Errorf("expected size 2, got %d", size)
 	}
 
-	cache.Clear()
+	cache.Clear(ctx)
 
-	if cache.Size() != 0 {
-		t.Errorf("expected size 0 after clear, got %d", cache.Size())
+	size, _ = cache.Size(ctx)
+	if size != 0 {
+		t.Errorf("expected size 0 after clear, got %d", size)
 	}
 
 	_, err := cache.Get(ctx, "key1")
@@ -102,24 +104,28 @@ func TestInMemory_Size(t *testing.T) {
 	cache := NewInMemory()
 	ctx := context.Background()
 
-	if cache.Size() != 0 {
-		t.Errorf("expected size 0 for new cache, got %d", cache.Size())
+	size, _ := cache.Size(ctx)
+	if size != 0 {
+		t.Errorf("expected size 0 for new cache, got %d", size)
 	}
 
 	cache.Set(ctx, "key1", []ports.CommitSuggestion{})
-	if cache.Size() != 1 {
-		t.Errorf("expected size 1, got %d", cache.Size())
+	size, _ = cache.Size(ctx)
+	if size != 1 {
+		t.Errorf("expected size 1, got %d", size)
 	}
 
 	cache.Set(ctx, "key2", []ports.CommitSuggestion{})
-	if cache.Size() != 2 {
-		t.Errorf("expected size 2, got %d", cache.Size())
+	size, _ = cache.Size(ctx)
+	if size != 2 {
+		t.Errorf("expected size 2, got %d", size)
 	}
 
 	// Overwrite existing key
 	cache.Set(ctx, "key1", []ports.CommitSuggestion{{Type: "new", Subject: "value"}})
-	if cache.Size() != 2 {
-		t.Errorf("expected size 2 after overwrite, got %d", cache.Size())
+	size, _ = cache.Size(ctx)
+	if size != 2 {
+		t.Errorf("expected size 2 after overwrite, got %d", size)
 	}
 }
 
@@ -157,14 +163,15 @@ func TestInMemory_Concurrent(t *testing.T) {
 		wg.Add(1)
 		go func() {
 			defer wg.Done()
-			cache.Size()
+			cache.Size(ctx)
 		}()
 	}
 
 	wg.Wait()
 
 	// Should not panic and size should be consistent
-	if cache.Size() < 0 {
+	size, _ := cache.Size(ctx)
+	if size < 0 {
 		t.Error("size should not be negative")
 	}
 }

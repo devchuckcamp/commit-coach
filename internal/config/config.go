@@ -9,7 +9,7 @@ import (
 )
 
 // ValidProviders is the list of supported LLM providers.
-var ValidProviders = []string{"openai", "anthropic", "groq", "ollama", "mock"}
+var ValidProviders = []string{"openai", "anthropic", "gemini", "groq", "ollama", "mock"}
 
 // Config holds all application configuration.
 type Config struct {
@@ -120,6 +120,13 @@ func Load() (*Config, error) {
 		if _, ok := os.LookupEnv("ANTHROPIC_API_KEY"); ok {
 			cfg.APIKey = getEnv("ANTHROPIC_API_KEY", "")
 		}
+	case "gemini":
+		// GEMINI_API_KEY takes priority, fallback to GOOGLE_API_KEY
+		if _, ok := os.LookupEnv("GEMINI_API_KEY"); ok {
+			cfg.APIKey = getEnv("GEMINI_API_KEY", "")
+		} else if _, ok := os.LookupEnv("GOOGLE_API_KEY"); ok {
+			cfg.APIKey = getEnv("GOOGLE_API_KEY", "")
+		}
 	case "groq":
 		if _, ok := os.LookupEnv("GROQ_API_KEY"); ok {
 			cfg.APIKey = getEnv("GROQ_API_KEY", "")
@@ -136,9 +143,12 @@ func Load() (*Config, error) {
 	}
 
 	// Check API key requirement for cloud providers
-	if (cfg.Provider == "openai" || cfg.Provider == "groq" || cfg.Provider == "anthropic") && cfg.APIKey == "" {
+	if (cfg.Provider == "openai" || cfg.Provider == "groq" || cfg.Provider == "anthropic" || cfg.Provider == "gemini") && cfg.APIKey == "" {
 		if cfg.Provider == "anthropic" {
 			return cfg, fmt.Errorf("%w: API key not found for provider anthropic; set ANTHROPIC_API_KEY env var", ErrSetupRequired)
+		}
+		if cfg.Provider == "gemini" {
+			return cfg, fmt.Errorf("%w: API key not found for provider gemini; set GEMINI_API_KEY or GOOGLE_API_KEY env var", ErrSetupRequired)
 		}
 		return cfg, fmt.Errorf("%w: API key not found for provider %s; set %s_API_KEY env var", ErrSetupRequired, cfg.Provider, strings.ToUpper(cfg.Provider))
 	}

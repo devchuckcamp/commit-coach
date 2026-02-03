@@ -50,15 +50,16 @@ func (c *InMemory) Set(ctx context.Context, key string, suggestions []ports.Comm
 }
 
 // Clear empties the cache.
-func (c *InMemory) Clear() {
+func (c *InMemory) Clear(ctx context.Context) error {
 	c.mu.Lock()
 	defer c.mu.Unlock()
 	c.cache = make(map[string][]ports.CommitSuggestion)
+	return nil
 }
 
 // Size returns the number of cached entries.
-func (c *InMemory) Size() int {
+func (c *InMemory) Size(ctx context.Context) (int, error) {
 	c.mu.RLock()
 	defer c.mu.RUnlock()
-	return len(c.cache)
+	return len(c.cache), nil
 }

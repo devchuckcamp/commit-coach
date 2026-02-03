@@ -134,6 +134,15 @@ func (f *FakeCache) Set(ctx context.Context, key string, suggestions []ports.Com
 	return nil
 }
 
+func (f *FakeCache) Clear(ctx context.Context) error {
+	f.data = make(map[string][]ports.CommitSuggestion)
+	return nil
+}
+
+func (f *FakeCache) Size(ctx context.Context) (int, error) {
+	return len(f.data), nil
+}
+
 // DiffHash computes SHA256 hash of a diff string.
 func DiffHash(diff string) string {
 	h := sha256.New()

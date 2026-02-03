@@ -52,6 +52,8 @@ type Clock interface {
 type Cache interface {
 	Get(ctx context.Context, key string) ([]CommitSuggestion, error)
 	Set(ctx context.Context, key string, suggestions []CommitSuggestion) error
+	Clear(ctx context.Context) error
+	Size(ctx context.Context) (int, error)
 }
 
 // StagedFile represents a staged file with metadata.

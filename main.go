@@ -99,7 +99,7 @@ func run(args []string) int {
 			cfg.Provider = provider
 			cfg.Model = model
 			switch provider {
-			case "openai", "groq", "anthropic":
+			case "openai", "groq", "anthropic", "gemini":
 				cfg.APIKey = apiKey
 			case "ollama":
 				cfg.APIKey = "ollama"
@@ -120,7 +120,7 @@ func run(args []string) int {
 
 	// Create adapters
 	gitAdapter := git.NewExecutor()
-	cacheAdapter := cache.NewInMemory()
+	cacheAdapter := cache.NewTieredCache("", 100) // Use default cache dir, max 100 entries
 
 	// Use factory to create LLM provider
 	llmAdapter, err := llm.NewFromConfig(cfg.Provider, cfg.APIKey, cfg.BaseURL, cfg.OllamaURL, cfg.Model)
@@ -255,7 +255,7 @@ func runSetup(args []string) int {
 	cfg.Provider = provider
 	cfg.Model = model
 	switch provider {
-	case "openai", "groq", "anthropic":
+	case "openai", "groq", "anthropic", "gemini":
 		cfg.APIKey = apiKey
 	case "ollama":
 		cfg.APIKey = "ollama"
@@ -352,7 +352,7 @@ func runConfig(args []string) int {
 				cfg.APIKey = "mock"
 			case "ollama":
 				cfg.APIKey = "ollama"
-			case "openai", "groq", "anthropic":
+			case "openai", "groq", "anthropic", "gemini":
 				if strings.TrimSpace(cfg.APIKey) == "" {
 					fmt.Fprintf(os.Stderr, "API key is required for provider %s (pass --api-key or set env var)\n", cfg.Provider)
 					return 2
@@ -422,7 +422,7 @@ func runSuggest(args []string) int {
 	}
 
 	gitAdapter := git.NewExecutor()
-	cacheAdapter := cache.NewInMemory()
+	cacheAdapter := cache.NewTieredCache("", 100) // Use default cache dir, max 100 entries
 	llmAdapter, err := llm.NewFromConfig(cfg.Provider, cfg.APIKey, cfg.BaseURL, cfg.OllamaURL, cfg.Model)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "Failed to initialize LLM provider: %v\n", err)
